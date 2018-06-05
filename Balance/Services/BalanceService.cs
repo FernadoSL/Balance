@@ -27,17 +27,19 @@ namespace Balance.Services
                 Timer.Start();
             }
 
-            foreach (var server in ServerList)
-            {
-                server.Working = this.PingHost(server);
-                if (Timer.ElapsedMilliseconds > 60000)
-                {
-                    this.Update();
-                    Timer.Restart();
-                }
-            }
+            PingAllServers();
         }
+        
+        public string GetAll()
+        {
+            Server server = this.PickServer();
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), @"/ReadAll");
+            
+            var result = Client.GetAsync(url).Result;
 
+            return result.Content.ReadAsStringAsync().Result;
+        }
+        
         private bool PingHost(Server server)
         {
             Ping ping = new Ping();
@@ -55,9 +57,38 @@ namespace Balance.Services
 
                 return false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
+            }
+        }
+
+        private void PingAllServers()
+        {
+            foreach (var server in ServerList)
+            {
+                server.Working = this.PingHost(server);
+                if (Timer.ElapsedMilliseconds > 60000)
+                {
+                    this.Update();
+                    Timer.Restart();
+                }
+            }
+        }
+
+        private Server PickServer()
+        {
+            while (true)
+            {
+                Random rnd = new Random();
+                int randomIndex = rnd.Next(ServerList.Count);
+
+                Server server = ServerList.ElementAt(randomIndex);
+                if (server.Working)
+                    return server;
+
+                if (Timer.ElapsedMilliseconds > 60000 && ServerList.All(s => !s.Working))
+                    PingAllServers();
             }
         }
 
@@ -80,6 +111,11 @@ namespace Balance.Services
                     var response = this.Client.GetAsync(url).Result;
                 }
             }
+        }
+
+        private string CreateUrl(string ip, string portNumber, string mehtod)
+        {
+            return string.Format("http://{0}:{1}/{2}", ip, portNumber, mehtod);
         }
     }
 }

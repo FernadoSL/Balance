@@ -20,7 +20,7 @@ namespace Balance.Controllers
         [HttpGet]
         public string Get()
         {
-            return "value";
+            return this.BalanceService.GetAll();
         }
 
         [HttpGet("{id}")]
