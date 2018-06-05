@@ -1,5 +1,4 @@
-﻿using Balance.Configuration;
-using Balance.Entities;
+﻿using Balance.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System;
@@ -9,12 +8,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Timers;
 
 namespace Balance.Controllers
 {
     [Route("api/[controller]")]
-    public class ValuesController : Controller
+    public class MainController : Controller
     {
         private static List<Server> ServerList = new List<Server>();
 
@@ -22,10 +20,10 @@ namespace Balance.Controllers
 
         private HttpClient Client { get; set; }
 
-        public ValuesController(IOptions<List<Server>> serverList)
+        public MainController(IOptions<List<Server>> serverList)
         {
             this.Client = new HttpClient();
-            
+
             if (!ServerList.Any())
             {
                 ServerList = serverList.Value;
@@ -41,36 +39,30 @@ namespace Balance.Controllers
                     Timer.Restart();
                 }
             }
-
         }
 
-        // GET api/values
         [HttpGet]
-        public List<Server> Get()
+        public string Get()
         {
-            return ServerList;
+            return "value";
         }
 
-        // GET api/values/5
         [HttpGet("{id}")]
         public string Get(int id)
         {
             return "value";
         }
 
-        // POST api/values
         [HttpPost]
         public void Post([FromBody]string value)
         {
         }
 
-        // PUT api/values/5
         [HttpPut("{id}")]
         public void Put(int id, [FromBody]string value)
         {
         }
 
-        // DELETE api/values/5
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
