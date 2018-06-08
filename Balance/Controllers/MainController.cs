@@ -23,25 +23,28 @@ namespace Balance.Controllers
             return this.BalanceService.GetAll();
         }
 
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpGet("{key}")]
+        public string Get(string key)
         {
-            return "value";
+            return this.BalanceService.GetByKey(key);
         }
 
         [HttpPost]
         public void Post([FromBody]string value)
         {
+            this.BalanceService.Insert(value);
         }
 
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody]string value)
+        [HttpPut("{key}")]
+        public void Put(string key, [FromBody]string value)
         {
+            this.BalanceService.Update(key, value);
         }
 
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpDelete("{key}")]
+        public void Delete(string key)
         {
+            this.BalanceService.Delete(key);
         }
     }
 }

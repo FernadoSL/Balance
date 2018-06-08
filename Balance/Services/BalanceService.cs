@@ -3,9 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Net;
 
 namespace Balance.Services
 {
@@ -33,8 +34,42 @@ namespace Balance.Services
         public string GetAll()
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), @"/ReadAll");
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "ReadAll");
             
+            var result = Client.GetAsync(url).Result;
+
+            return result.Content.ReadAsStringAsync().Result;
+        }
+
+        public void Insert(string value)
+        {
+            Server server = this.PickServer();
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "Insert");
+            
+            Client.PostAsJsonAsync(url, value);
+        }
+
+        public void Update(string key, string value)
+        {
+            Server server = this.PickServer();
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
+
+            Client.PutAsJsonAsync(url, value);
+        }
+
+        public void Delete(string key)
+        {
+            Server server = this.PickServer();
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
+
+            Client.DeleteAsync(url);
+        }
+
+        public string GetByKey(string key)
+        {
+            Server server = this.PickServer();
+            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
+
             var result = Client.GetAsync(url).Result;
 
             return result.Content.ReadAsStringAsync().Result;
@@ -49,7 +84,7 @@ namespace Balance.Services
 
                 if (reply.Status == IPStatus.Success)
                 {
-                    string url = string.Format("http://{0}:{1}", server.Ip, server.PortNumber);
+                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "HealthCheck");
 
                     var response = this.Client.GetAsync(url).Result;
                     return response.StatusCode == HttpStatusCode.OK;
