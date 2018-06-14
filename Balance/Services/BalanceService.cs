@@ -14,6 +14,10 @@ namespace Balance.Services
     {
         private static List<Server> ServerList = new List<Server>();
 
+        private static int LasIdServerUsed = 0;
+
+        private static int LastKeyInserted = 1;
+
         private static Stopwatch Timer = new Stopwatch();
 
         private HttpClient Client { get; set; }
@@ -27,7 +31,7 @@ namespace Balance.Services
                 ServerList = serverList;
                 Timer.Start();
             }
-
+            
             PingAllServers();
         }
         
@@ -45,8 +49,14 @@ namespace Balance.Services
         {
             Server server = this.PickServer();
             string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "Insert");
+
+            string key = (LastKeyInserted + 1).ToString();
+            var data = string.Format("{0}:{1}", key, value);
             
-            Client.PostAsJsonAsync(url, value);
+            var response = Client.PostAsJsonAsync(url, data).Result;
+
+            if (response.IsSuccessStatusCode)
+                LastKeyInserted++;
         }
 
         public void Update(string key, string value)
@@ -115,12 +125,22 @@ namespace Balance.Services
         {
             while (true)
             {
-                Random rnd = new Random();
-                int randomIndex = rnd.Next(ServerList.Count);
+                Server server = null;
 
-                Server server = ServerList.ElementAt(randomIndex);
-                if (server.Working)
+                if (ServerList.Count(s => s.Working) > 1)
+                {
+                    server = ServerList.FirstOrDefault(s => s.ServerId != LasIdServerUsed && s.Working);
+                }
+                else
+                {
+                    server = ServerList.FirstOrDefault(s => s.Working);
+                }
+                
+                if (server != null && server.Working)
+                {
+                    LasIdServerUsed = server.ServerId;
                     return server;
+                }
 
                 if (Timer.ElapsedMilliseconds > 60000 && ServerList.All(s => !s.Working))
                     PingAllServers();
@@ -129,12 +149,20 @@ namespace Balance.Services
 
         private void Update()
         {
+            List<string> allData = new List<string>();
+
             foreach (var server in ServerList)
             {
                 if (server.Working)
                 {
-                    string url = string.Format("http://{0}:{1}/{2}", server.Ip, server.PortNumber, "getAllKeys");
-                    var response = this.Client.GetAsync(url).Result;
+                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "/ReadAll");
+                    var response = this.Client.GetAsync(url).Result.Content.ReadAsAsync<List<string>>();
+
+                    foreach (var data in response.Result)
+                    {
+                        if (!allData.Any(d => d.Equals(data)))
+                            allData.Add(data);
+                    }
                 }
             }
 
@@ -142,8 +170,8 @@ namespace Balance.Services
             {
                 if (server.Working)
                 {
-                    string url = string.Format("http://{0}:{1}/{2}", server.Ip, server.PortNumber, "update");
-                    var response = this.Client.GetAsync(url).Result;
+                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/UpdateAll");
+                    this.Client.PostAsJsonAsync(url, allData);
                 }
             }
         }
