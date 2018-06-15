@@ -12,19 +12,17 @@ namespace Balance.Services
 {
     public class BalanceService
     {
+        private HttpClientService Client { get; set; }
+
         private static List<Server> ServerList = new List<Server>();
-
-        private static int LasIdServerUsed = 0;
-
-        private static int LastKeyInserted = 0;
 
         private static Stopwatch Timer = new Stopwatch();
 
-        private HttpClient Client { get; set; }
+        private static int LasIdServerUsed = 0;
 
         public BalanceService(List<Server> serverList)
         {
-            this.Client = new HttpClient();
+            this.Client = new HttpClientService();
 
             if (!ServerList.Any())
             {
@@ -35,54 +33,39 @@ namespace Balance.Services
             PingAllServers();
         }
 
-        public string GetAll()
+        public List<string> GetAll()
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "ReadAll");
+            return this.GetAll(server);
+        }
 
-            var result = Client.GetAsync(url).Result;
-
-            return result.Content.ReadAsStringAsync().Result;
+        public List<string> GetAll(Server server)
+        {
+            return this.Client.GetAll(server);
         }
 
         public void Insert(string value)
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "Insert");
-
-            string key = (LastKeyInserted + 1).ToString();
-            string data = string.Format("{0}:{1}", key, value);
-
-            var response = Client.PostAsJsonAsync(url, data).Result;
-
-            if (response.IsSuccessStatusCode)
-                LastKeyInserted++;
+            this.Client.Insert(value, server);
         }
 
         public void Update(string key, string value)
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
-
-            Client.PutAsJsonAsync(url, value);
+            this.Client.Update(key, value, server);
         }
 
         public void Delete(string key)
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
-
-            Client.DeleteAsync(url);
+            this.Client.Delete(key, server);
         }
 
         public string GetByKey(string key)
         {
             Server server = this.PickServer();
-            string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/" + key);
-
-            var result = Client.GetAsync(url).Result;
-
-            return result.Content.ReadAsStringAsync().Result;
+            return this.Client.GetByKey(key, server);
         }
 
         private bool PingHost(Server server)
@@ -94,10 +77,7 @@ namespace Balance.Services
 
                 if (reply.Status == IPStatus.Success)
                 {
-                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "HealthCheck");
-
-                    var response = this.Client.GetAsync(url).Result;
-                    return response.StatusCode == HttpStatusCode.OK;
+                    return this.Client.HealthCheck(server);
                 }
 
                 return false;
@@ -151,35 +131,13 @@ namespace Balance.Services
 
             foreach (var server in ServerList)
             {
-                if (server.Working)
-                {
-                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "/ReadAll");
-                    var response = this.Client.GetAsync(url).Result.Content.ReadAsAsync<List<string>>();
-
-                    if (response == null)
-                    {
-                        foreach (var data in response.Result)
-                        {
-                            if (!allData.Any(d => d.Equals(data)))
-                                allData.Add(data);
-                        }
-                    }
-                }
+                allData.AddRange(this.GetAll(server));
             }
 
             foreach (var server in ServerList)
             {
-                if (server.Working)
-                {
-                    string url = this.CreateUrl(server.Ip, server.PortNumber.ToString(), "api/values/UpdateAll");
-                    this.Client.PostAsJsonAsync(url, allData);
-                }
+                this.Client.UpdateAllData(server, allData);
             }
-        }
-
-        private string CreateUrl(string ip, string portNumber, string mehtod)
-        {
-            return string.Format("http://{0}:{1}/{2}", ip, portNumber, mehtod);
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Balance.Controllers
         }
 
         [HttpGet]
-        public string Get()
+        public List<string> Get()
         {
             return this.BalanceService.GetAll();
         }
