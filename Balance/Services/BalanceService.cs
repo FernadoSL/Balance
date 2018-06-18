@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
-using System.Net.Http;
-using Newtonsoft.Json;
-using System.Net;
 
 namespace Balance.Services
 {
@@ -32,42 +29,7 @@ namespace Balance.Services
 
             PingAllServers();
         }
-
-        public List<string> GetAll()
-        {
-            Server server = this.PickServer();
-            return this.GetAll(server);
-        }
-
-        public List<string> GetAll(Server server)
-        {
-            return this.Client.GetAll(server);
-        }
-
-        public void Insert(string value)
-        {
-            Server server = this.PickServer();
-            this.Client.Insert(value, server);
-        }
-
-        public void Update(string key, string value)
-        {
-            Server server = this.PickServer();
-            this.Client.Update(key, value, server);
-        }
-
-        public void Delete(string key)
-        {
-            Server server = this.PickServer();
-            this.Client.Delete(key, server);
-        }
-
-        public string GetByKey(string key)
-        {
-            Server server = this.PickServer();
-            return this.Client.GetByKey(key, server);
-        }
-
+        
         private bool PingHost(Server server)
         {
             Ping ping = new Ping();
@@ -101,7 +63,7 @@ namespace Balance.Services
             }
         }
 
-        private Server PickServer()
+        public Server PickServer()
         {
             while (true)
             {
@@ -131,7 +93,7 @@ namespace Balance.Services
 
             foreach (var server in ServerList)
             {
-                allData.AddRange(this.GetAll(server));
+                allData.AddRange(this.Client.GetAll(server));
             }
 
             foreach (var server in ServerList)
